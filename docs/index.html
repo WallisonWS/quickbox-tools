@@ -332,5 +332,34 @@ Treinamento &amp; Documentação Técnica | 2 | 450</textarea>
     document.getElementById('pomoPause').addEventListener('click', () => { clearInterval(pomoTimer); pomoTimer = null; });
     renderPomo();
   </script>
+  <!-- Trilingual Auto-Detect Language Switcher (EN / PT-BR / ES) -->
+  <div id="wallison-i18n-bar" style="position:fixed;bottom:16px;left:16px;z-index:9999;display:flex;gap:4px;background:rgba(15,22,38,0.92);backdrop-filter:blur(8px);border:1px solid #334155;padding:5px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.45);font-family:system-ui,sans-serif;">
+    <button data-wl="en" style="border:none;background:transparent;color:#cbd5e1;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">🇺🇸 EN</button>
+    <button data-wl="pt" style="border:none;background:transparent;color:#cbd5e1;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">🇧🇷 PT</button>
+    <button data-wl="es" style="border:none;background:transparent;color:#cbd5e1;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;">🇪🇸 ES</button>
+  </div>
+  <script>
+  (function(){
+    const I18N = {"pt":{"h":"🧰 QuickBox — QR Code PIX Oficial, Orçamento PDF, Dev na Gringa \u0026 Pomodoro","p":"Ferramentas gratuitas sem anúncios: QR Code PIX Estático (Banco Central CRC16), Wi-Fi/WhatsApp QR, Orçamento PDF, Simulador Dev USD↔BRL PJ, Juros Compostos e Pomodoro."},"en":{"h":"🧰 QuickBox — PIX EMV QR Code, Invoice PDF, Remote Dev USD↔BRL \u0026 Pomodoro","p":"Free ad-free everyday toolkit: Official Brazil EMV PIX QR Code (CRC16), Wi-Fi/WhatsApp QR, Printable Invoice PDF, USD↔BRL Freelancer Calculator \u0026 Pomodoro."},"es":{"h":"🧰 QuickBox — QR PIX/Wi-Fi/WhatsApp, Factura PDF, Calculadora Freelancer y Pomodoro","p":"Suite gratuita sin anuncios: generador QR (PIX EMV/Wi-Fi/WhatsApp), presupuestos/facturas PDF, calculadora freelancer USD↔BRL, interés compuesto y Pomodoro."}};
+    const btns = document.querySelectorAll('#wallison-i18n-bar button');
+    const saved = localStorage.getItem('ws_global_lang');
+    const nav = (navigator.language || 'en').toLowerCase();
+    let cur = (saved && I18N[saved]) ? saved : (nav.startsWith('pt') ? 'pt' : nav.startsWith('es') ? 'es' : 'en');
+    function apply(l){
+      cur = l; localStorage.setItem('ws_global_lang', l);
+      const h1 = document.querySelector('.hero h1, .hdr h1');
+      const p = document.querySelector('.hero p, .hdr p');
+      if (h1 && I18N[l].h) h1.textContent = I18N[l].h;
+      if (p && I18N[l].p) p.textContent = I18N[l].p;
+      btns.forEach(b => {
+        const active = b.dataset.wl === l;
+        b.style.background = active ? '#38bdf8' : 'transparent';
+        b.style.color = active ? '#060a14' : '#cbd5e1';
+      });
+    }
+    btns.forEach(b => b.addEventListener('click', () => apply(b.dataset.wl)));
+    apply(cur);
+  })();
+  </script>
 </body>
 </html>
