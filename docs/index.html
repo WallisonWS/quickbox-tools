@@ -50,24 +50,36 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-t="q-qr">📱 QR Code (URL / Wi-Fi / WhatsApp)</button>
-      <button class="tab" data-t="q-inv">🧾 Gerador de Orçamento / Invoice PDF</button>
-      <button class="tab" data-t="q-fin">💰 Simulador de Juros Compostos</button>
-      <button class="tab" data-t="q-pomo">⏱️ Pomodoro Focus Timer</button>
+      <button class="tab active" data-t="q-qr">📱 QR Code (PIX EMV / Wi-Fi / WhatsApp)</button>
+      <button class="tab" data-t="q-inv">🧾 Orçamento / Invoice PDF</button>
+      <button class="tab" data-t="q-pj">💵 Dev na Gringa / Freelancer (USD↔BRL)</button>
+      <button class="tab" data-t="q-fin">💰 Juros Compostos</button>
+      <button class="tab" data-t="q-pomo">⏱️ Pomodoro Timer</button>
     </div>
 
-    <!-- 1. QR CODE / WI-FI / WHATSAPP -->
+    <!-- 1. QR CODE / PIX EMV / WI-FI / WHATSAPP -->
     <section class="panel active" id="q-qr">
       <div class="grid">
         <div class="card">
           <h2>⚙️ Configurar QR Code</h2>
           <label>Tipo</label>
           <select id="qrType">
-            <option value="url">Link / URL / PIX Copia e Cola</option>
+            <option value="pix" selected>🇧🇷 PIX Estático Oficial (Banco Central EMV CRC16)</option>
+            <option value="url">Link / URL</option>
             <option value="wifi">Conectar Wi-Fi Automaticamente</option>
             <option value="wa">Link Direto WhatsApp (wa.me)</option>
           </select>
-          <div id="qrFieldsUrl">
+          <div id="qrFieldsPix">
+            <div class="row">
+              <div><label>Chave PIX</label><input id="qrPixKey" value="contato@suaempresa.com.br" /></div>
+              <div><label>Valor R$ (opcional)</label><input id="qrPixAmt" value="99.90" /></div>
+            </div>
+            <div class="row">
+              <div><label>Nome do Recebedor</label><input id="qrPixName" value="WALLISON ARAUJO" /></div>
+              <div><label>Cidade</label><input id="qrPixCity" value="GOIANIA" /></div>
+            </div>
+          </div>
+          <div id="qrFieldsUrl" style="display:none;">
             <label>Conteúdo / URL</label>
             <input id="qrUrlVal" value="https://github.com/WallisonWS" />
           </div>
@@ -155,6 +167,30 @@ Treinamento &amp; Documentação Técnica | 2 | 450</textarea>
         <input id="pomoTask" placeholder="No que você está focado agora?" value="Finalizar entrega de alta prioridade" />
       </div>
     </section>
+
+    <!-- 5. GLOBAL REMOTE DEV / FREELANCER USD/EUR -> BRL SIMULATOR -->
+    <section class="panel" id="q-pj">
+      <div class="grid">
+        <div class="card">
+          <h2>💵 Simulador Dev Internacional / Freelancer (USD / EUR → BRL)</h2>
+          <div class="row">
+            <div><label>Valor Mensal (Moeda Estrangeira)</label><input type="number" id="pjForeign" value="5000" /></div>
+            <div><label>Cotação (R$ por USD/EUR)</label><input type="number" id="pjRate" value="5.75" step="0.05" /></div>
+          </div>
+          <div class="row">
+            <div><label>Imposto Efetivo PJ / Exportação (%)</label><input type="number" id="pjTax" value="6.5" step="0.5" /></div>
+            <div><label>Spread / Câmbio + Contabilidade (R$)</label><input type="number" id="pjFees" value="450" /></div>
+          </div>
+          <div class="row">
+            <div><label>Horas / Mês</label><input type="number" id="pjHours" value="160" /></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>📊 Resumo Líquido (Mensal &amp; Anual)</h2>
+          <div id="pjResultGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;"></div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -164,14 +200,37 @@ Treinamento &amp; Documentação Técnica | 2 | 450</textarea>
       t.classList.add('active'); document.getElementById(t.dataset.t).classList.add('active');
     }));
 
-    // 1. QR Code
+    // 1. QR Code + Real Banco Central EMV PIX CRC16-CCITT
+    function tlv(id, val) { return `${id}${String(val.length).padStart(2, '0')}${val}`; }
+    function crc16(str) {
+      let crc = 0xFFFF;
+      for (let i = 0; i < str.length; i++) {
+        crc ^= str.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+      }
+      return crc.toString(16).toUpperCase().padStart(4, '0');
+    }
+    function buildPixPayload() {
+      const key = document.getElementById('qrPixKey').value.trim() || 'contato@empresa.com.br';
+      const amt = document.getElementById('qrPixAmt').value.trim().replace(',', '.');
+      const name = (document.getElementById('qrPixName').value.trim() || 'RECEBEDOR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 25);
+      const city = (document.getElementById('qrPixCity').value.trim() || 'SAO PAULO').normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 15);
+      const mai = tlv('00', 'br.gov.bcb.pix') + tlv('01', key);
+      let p = tlv('00', '01') + tlv('26', mai) + tlv('52', '0000') + tlv('53', '986');
+      if (amt && !isNaN(Number(amt)) && Number(amt) > 0) p += tlv('54', Number(amt).toFixed(2));
+      p += tlv('58', 'BR') + tlv('59', name) + tlv('60', city) + tlv('62', tlv('05', '***')) + '6304';
+      return p + crc16(p);
+    }
+
     function updateQr() {
       const t = document.getElementById('qrType').value;
+      document.getElementById('qrFieldsPix').style.display = t === 'pix' ? 'block' : 'none';
       document.getElementById('qrFieldsUrl').style.display = t === 'url' ? 'block' : 'none';
       document.getElementById('qrFieldsWifi').style.display = t === 'wifi' ? 'block' : 'none';
       document.getElementById('qrFieldsWa').style.display = t === 'wa' ? 'block' : 'none';
       let payload = '';
-      if (t === 'url') payload = document.getElementById('qrUrlVal').value;
+      if (t === 'pix') payload = buildPixPayload();
+      else if (t === 'url') payload = document.getElementById('qrUrlVal').value;
       else if (t === 'wifi') payload = `WIFI:T:WPA;S:${document.getElementById('qrWifiSsid').value};P:${document.getElementById('qrWifiPass').value};;`;
       else payload = `https://wa.me/${document.getElementById('qrWaPhone').value.replace(/\D/g,'')}?text=${encodeURIComponent(document.getElementById('qrWaMsg').value)}`;
       document.getElementById('qrPayloadPreview').value = payload;
@@ -179,8 +238,28 @@ Treinamento &amp; Documentação Técnica | 2 | 450</textarea>
       document.getElementById('qrImg').src = qrSrc;
       document.getElementById('qrDlLink').href = qrSrc;
     }
-    ['qrType','qrUrlVal','qrWifiSsid','qrWifiPass','qrWaPhone','qrWaMsg'].forEach(id => document.getElementById(id).addEventListener('input', updateQr));
+    ['qrType','qrPixKey','qrPixAmt','qrPixName','qrPixCity','qrUrlVal','qrWifiSsid','qrWifiPass','qrWaPhone','qrWaMsg'].forEach(id => document.getElementById(id).addEventListener('input', updateQr));
     updateQr();
+
+    // 5. Global Dev / Freelancer PJ Simulator
+    function updatePj() {
+      const f = parseFloat(document.getElementById('pjForeign').value) || 0;
+      const r = parseFloat(document.getElementById('pjRate').value) || 5.75;
+      const taxPct = (parseFloat(document.getElementById('pjTax').value) || 0) / 100;
+      const fees = parseFloat(document.getElementById('pjFees').value) || 0;
+      const hrs = Math.max(1, parseFloat(document.getElementById('pjHours').value) || 160);
+      const gross = f * r;
+      const tax = gross * taxPct;
+      const net = Math.max(0, gross - tax - fees);
+      const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('pjResultGrid').innerHTML = `
+        <div style="background:#090f1d;padding:14px;border-radius:10px;"><small style="color:#64748b;">BRUTO MENSAL</small><div style="font-size:1.25rem;font-weight:900;color:#e2e8f0;">${fmt(gross)}</div></div>
+        <div style="background:#090f1d;padding:14px;border-radius:10px;"><small style="color:#64748b;">LÍQUIDO MENSAL</small><div style="font-size:1.25rem;font-weight:900;color:#10b981;">${fmt(net)}</div></div>
+        <div style="background:#090f1d;padding:14px;border-radius:10px;"><small style="color:#64748b;">LÍQUIDO ANUAL (12x)</small><div style="font-size:1.25rem;font-weight:900;color:#38bdf8;">${fmt(net * 12)}</div></div>
+        <div style="background:#090f1d;padding:14px;border-radius:10px;"><small style="color:#64748b;">VALOR HORA LÍQUIDO</small><div style="font-size:1.25rem;font-weight:900;color:#fbbf24;">${fmt(net / hrs)}/h</div></div>`;
+    }
+    ['pjForeign','pjRate','pjTax','pjFees','pjHours'].forEach(id => document.getElementById(id).addEventListener('input', updatePj));
+    updatePj();
 
     // 2. Invoice Builder
     function updateInvoice() {
