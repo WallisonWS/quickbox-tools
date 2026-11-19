@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuickBox — QR/Wi-Fi/WhatsApp Generator, Invoice PDF, Juros Compostos &amp; Pomodoro</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Inter',system-ui,sans-serif; background:#070b14; color:#f8fafc; min-height:100vh; padding:24px 18px; background-image:radial-gradient(circle at 12% 0%,rgba(56,189,248,0.12),transparent 38%),radial-gradient(circle at 88% 8%,rgba(16,185,129,0.12),transparent 38%); }
+    .wrap { max-width:1120px; margin:0 auto; }
+    .hdr { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; padding:22px 26px; border-radius:16px; background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(16,185,129,0.15)); border:1px solid rgba(56,189,248,0.35); margin-bottom:20px; }
+    .hdr h1 { font-size:1.6rem; font-weight:800; }
+    .hdr p { color:#94a3b8; font-size:0.9rem; margin-top:4px; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+    .tab { padding:10px 16px; border-radius:10px; border:1px solid #22304a; background:#101726; color:#94a3b8; font-weight:700; cursor:pointer; font-size:0.85rem; }
+    .tab.active { background:linear-gradient(135deg,#0ea5e9,#10b981); color:#070b14; border-color:transparent; }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:18px; }
+    .card { background:#101726; border:1px solid #22304a; border-radius:14px; padding:20px; margin-bottom:18px; }
+    .card h2 { font-size:1rem; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+    label { font-size:0.78rem; color:#94a3b8; font-weight:600; display:block; margin-bottom:4px; }
+    input, select, textarea { width:100%; background:#090f1d; border:1px solid #22304a; color:#f1f5f9; border-radius:8px; padding:9px 11px; font-size:0.86rem; margin-bottom:10px; }
+    .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+    .btn { background:linear-gradient(135deg,#0ea5e9,#10b981); color:#070b14; border:none; padding:9px 16px; border-radius:9px; font-weight:800; cursor:pointer; font-size:0.84rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+    .btn-ghost { background:#090f1d; border:1px solid #22304a; color:#e2e8f0; }
+    .timer-big { font-size:4.2rem; font-weight:900; font-family:Consolas,monospace; text-align:center; color:#38bdf8; margin:16px 0; }
+    .invoice-paper { background:#fff; color:#0f172a; padding:28px; border-radius:12px; }
+    .invoice-paper table { width:100%; border-collapse:collapse; margin:14px 0; font-size:0.86rem; }
+    .invoice-paper th, .invoice-paper td { padding:8px; border-bottom:1px solid #e2e8f0; text-align:left; }
+    canvas { width:100%; background:#090f1d; border:1px solid #1e293b; border-radius:10px; }
+    @media print {
+      body * { visibility:hidden; }
+      #invoicePrintArea, #invoicePrintArea * { visibility:visible; }
+      #invoicePrintArea { position:fixed; inset:0; padding:24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+      <div>
+        <h1>🧰 QuickBox — Everyday Productivity, Business &amp; Utility Suite</h1>
+        <p>Ferramentas rápidas e gratuitas para o dia a dia de Freelancers, Empresas, Estudantes e Criadores: Wi-Fi/WhatsApp QR Generator, Orçamento/Invoice PDF, Juros Compostos &amp; Pomodoro.</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a href="https://github.com/WallisonWS/quickbox-tools" target="_blank" class="btn">⭐ Star on GitHub</a>
+        <a href="https://github.com/WallisonWS" target="_blank" class="btn btn-ghost">@WallisonWS</a>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-t="q-qr">📱 QR Code (URL / Wi-Fi / WhatsApp)</button>
+      <button class="tab" data-t="q-inv">🧾 Gerador de Orçamento / Invoice PDF</button>
+      <button class="tab" data-t="q-fin">💰 Simulador de Juros Compostos</button>
+      <button class="tab" data-t="q-pomo">⏱️ Pomodoro Focus Timer</button>
+    </div>
+
+    <!-- 1. QR CODE / WI-FI / WHATSAPP -->
+    <section class="panel active" id="q-qr">
+      <div class="grid">
+        <div class="card">
+          <h2>⚙️ Configurar QR Code</h2>
+          <label>Tipo</label>
+          <select id="qrType">
+            <option value="url">Link / URL / PIX Copia e Cola</option>
+            <option value="wifi">Conectar Wi-Fi Automaticamente</option>
+            <option value="wa">Link Direto WhatsApp (wa.me)</option>
+          </select>
+          <div id="qrFieldsUrl">
+            <label>Conteúdo / URL</label>
+            <input id="qrUrlVal" value="https://github.com/WallisonWS" />
+          </div>
+          <div id="qrFieldsWifi" style="display:none;">
+            <label>Nome da Rede (SSID)</label><input id="qrWifiSsid" value="Empresa_Visitantes" />
+            <label>Senha do Wi-Fi</label><input id="qrWifiPass" value="SenhaSegura2026" />
+          </div>
+          <div id="qrFieldsWa" style="display:none;">
+            <label>Número WhatsApp (com DDI, ex: 5562999999999)</label><input id="qrWaPhone" value="5562999999999" />
+            <label>Mensagem Pronta</label><input id="qrWaMsg" value="Olá! Gostaria de solicitar um orçamento." />
+          </div>
+          <label>Payload Gerado</label>
+          <input id="qrPayloadPreview" readonly />
+        </div>
+        <div class="card" style="text-align:center;">
+          <h2>📷 QR Code Pronto</h2>
+          <div style="background:#fff; display:inline-block; padding:16px; border-radius:14px; margin:12px 0;">
+            <img id="qrImg" width="220" height="220" alt="QR Code" />
+          </div>
+          <div><a id="qrDlLink" class="btn" target="_blank" download="qrcode.png">⬇️ Abrir / Baixar PNG</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. FREELANCER INVOICE / ORÇAMENTO PDF -->
+    <section class="panel" id="q-inv">
+      <div class="grid">
+        <div class="card">
+          <h2>✏️ Dados do Orçamento / Recibo</h2>
+          <div class="row">
+            <div><label>Sua Empresa / Nome</label><input id="invFrom" value="Wallison Tech &amp; Consultoria" /></div>
+            <div><label>Cliente</label><input id="invTo" value="Empresa Cliente Ltda" /></div>
+          </div>
+          <div class="row">
+            <div><label>Chave PIX / Pagamento</label><input id="invPix" value="contato@suaempresa.com.br" /></div>
+            <div><label>Desconto (%)</label><input type="number" id="invDisc" value="0" min="0" max="100" /></div>
+          </div>
+          <label>Itens (1 por linha: Descrição | Qtd | Valor Unitário)</label>
+          <textarea id="invItems" rows="5">Auditoria de Segurança &amp; Firewall Zero Trust | 1 | 2500
+Desenvolvimento Landing Page / Web App | 1 | 3200
+Treinamento &amp; Documentação Técnica | 2 | 450</textarea>
+          <button class="btn" onclick="window.print()">🖨️ Salvar / Imprimir PDF</button>
+        </div>
+
+        <div class="card">
+          <h2>📄 Prévia do Documento</h2>
+          <div class="invoice-paper" id="invoicePrintArea"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. COMPOUND INTEREST CALCULATOR -->
+    <section class="panel" id="q-fin">
+      <div class="grid">
+        <div class="card">
+          <h2>💰 Parâmetros Financeiros</h2>
+          <div class="row">
+            <div><label>Valor Inicial (R$)</label><input type="number" id="finInit" value="5000" /></div>
+            <div><label>Aporte Mensal (R$)</label><input type="number" id="finMonthly" value="1000" /></div>
+          </div>
+          <div class="row">
+            <div><label>Taxa Anual (%)</label><input type="number" id="finRate" value="11.5" step="0.1" /></div>
+            <div><label>Prazo (Anos)</label><input type="number" id="finYears" value="10" min="1" max="40" /></div>
+          </div>
+          <div id="finSummary" style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+        </div>
+        <div class="card">
+          <h2>📈 Evolução do Patrimônio</h2>
+          <canvas id="finCanvas" width="520" height="250"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. POMODORO FOCUS TIMER -->
+    <section class="panel" id="q-pomo">
+      <div class="card" style="max-width:520px; margin:0 auto; text-align:center;">
+        <h2 style="justify-content:center;">⏱️ Pomodoro Deep-Focus Timer</h2>
+        <div class="timer-big" id="pomoDisplay">25:00</div>
+        <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <button class="btn" id="pomoStart">▶ Iniciar</button>
+          <button class="btn btn-ghost" id="pomoPause">⏸ Pausar</button>
+          <button class="btn btn-ghost" onclick="setPomo(25)">Foco 25m</button>
+          <button class="btn btn-ghost" onclick="setPomo(5)">Pausa 5m</button>
+        </div>
+        <input id="pomoTask" placeholder="No que você está focado agora?" value="Finalizar entrega de alta prioridade" />
+      </div>
+    </section>
+  </div>
+
+  <script>
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active'); document.getElementById(t.dataset.t).classList.add('active');
+    }));
+
+    // 1. QR Code
+    function updateQr() {
+      const t = document.getElementById('qrType').value;
+      document.getElementById('qrFieldsUrl').style.display = t === 'url' ? 'block' : 'none';
+      document.getElementById('qrFieldsWifi').style.display = t === 'wifi' ? 'block' : 'none';
+      document.getElementById('qrFieldsWa').style.display = t === 'wa' ? 'block' : 'none';
+      let payload = '';
+      if (t === 'url') payload = document.getElementById('qrUrlVal').value;
+      else if (t === 'wifi') payload = `WIFI:T:WPA;S:${document.getElementById('qrWifiSsid').value};P:${document.getElementById('qrWifiPass').value};;`;
+      else payload = `https://wa.me/${document.getElementById('qrWaPhone').value.replace(/\D/g,'')}?text=${encodeURIComponent(document.getElementById('qrWaMsg').value)}`;
+      document.getElementById('qrPayloadPreview').value = payload;
+      const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(payload)}`;
+      document.getElementById('qrImg').src = qrSrc;
+      document.getElementById('qrDlLink').href = qrSrc;
+    }
+    ['qrType','qrUrlVal','qrWifiSsid','qrWifiPass','qrWaPhone','qrWaMsg'].forEach(id => document.getElementById(id).addEventListener('input', updateQr));
+    updateQr();
+
+    // 2. Invoice Builder
+    function updateInvoice() {
+      const from = document.getElementById('invFrom').value, to = document.getElementById('invTo').value;
+      const pix = document.getElementById('invPix').value, disc = parseFloat(document.getElementById('invDisc').value) || 0;
+      const lines = document.getElementById('invItems').value.split('\n').filter(l => l.trim());
+      let sub = 0, rowsHtml = '';
+      lines.forEach(l => {
+        const [d, q, p] = l.split('|').map(x => x.trim());
+        const qty = parseFloat(q) || 1, price = parseFloat(p) || 0, tot = qty * price;
+        sub += tot;
+        rowsHtml += `<tr><td>${d}</td><td>${qty}</td><td>R$ ${price.toFixed(2)}</td><td><strong>R$ ${tot.toFixed(2)}</strong></td></tr>`;
+      });
+      const finalTot = sub * (1 - disc / 100);
+      document.getElementById('invoicePrintArea').innerHTML = `
+        <div style="display:flex;justify-content:space-between;border-bottom:2px solid #0ea5e9;padding-bottom:10px;margin-bottom:12px;">
+          <div><h3 style="margin:0;">${from}</h3><small style="color:#64748b;">Orçamento / Recibo Profissional</small></div>
+          <div style="text-align:right;"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}<br/><small>Para: ${to}</small></div>
+        </div>
+        <table><thead><tr><th>Descrição</th><th>Qtd</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+        <div style="text-align:right;font-size:1.15rem;font-weight:900;margin-top:10px;color:#0284c7;">Total Final: R$ ${finalTot.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:0.82rem;color:#475569;"><strong>PIX / Pagamento:</strong> ${pix}</div>`;
+    }
+    ['invFrom','invTo','invPix','invDisc','invItems'].forEach(id => document.getElementById(id).addEventListener('input', updateInvoice));
+    updateInvoice();
+
+    // 3. Compound Interest
+    function updateFinance() {
+      const init = parseFloat(document.getElementById('finInit').value) || 0;
+      const monthly = parseFloat(document.getElementById('finMonthly').value) || 0;
+      const rateY = (parseFloat(document.getElementById('finRate').value) || 0) / 100;
+      const years = Math.min(40, Math.max(1, parseInt(document.getElementById('finYears').value, 10) || 1));
+      const rM = Math.pow(1 + rateY, 1 / 12) - 1;
+      let bal = init, invested = init, pts = [init];
+      for (let y = 1; y <= years; y++) {
+        for (let m = 0; m < 12; m++) { bal = bal * (1 + rM) + monthly; invested += monthly; }
+        pts.push(bal);
+      }
+      const profit = bal - invested;
+      const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+      document.getElementById('finSummary').innerHTML = `
+        <div style="background:#090f1d;padding:12px;border-radius:9px;"><small style="color:#64748b;">TOTAL ACUMULADO</small><div style="font-size:1.25rem;font-weight:900;color:#10b981;">${fmt(bal)}</div></div>
+        <div style="background:#090f1d;padding:12px;border-radius:9px;"><small style="color:#64748b;">JUROS GANHOS</small><div style="font-size:1.25rem;font-weight:900;color:#38bdf8;">${fmt(profit)}</div></div>`;
+
+      const c = document.getElementById('finCanvas'), ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+      const max = Math.max(...pts, 1), pad = 28;
+      ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.beginPath();
+      pts.forEach((v, i) => {
+        const x = pad + (i / years) * (c.width - pad * 2);
+        const y = c.height - pad - (v / max) * (c.height - pad * 2);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+    ['finInit','finMonthly','finRate','finYears'].forEach(id => document.getElementById(id).addEventListener('input', updateFinance));
+    updateFinance();
+
+    // 4. Pomodoro
+    let pomoSec = 1500, pomoTimer = null;
+    function renderPomo() {
+      const m = String(Math.floor(pomoSec / 60)).padStart(2, '0'), s = String(pomoSec % 60).padStart(2, '0');
+      document.getElementById('pomoDisplay').textContent = `${m}:${s}`;
+    }
+    window.setPomo = (mins) => { clearInterval(pomoTimer); pomoTimer = null; pomoSec = mins * 60; renderPomo(); };
+    document.getElementById('pomoStart').addEventListener('click', () => {
+      if (pomoTimer) return;
+      pomoTimer = setInterval(() => { if (pomoSec > 0) { pomoSec--; renderPomo(); } else { clearInterval(pomoTimer); pomoTimer = null; alert('⏰ Sessão Pomodoro concluída!'); } }, 1000);
+    });
+    document.getElementById('pomoPause').addEventListener('click', () => { clearInterval(pomoTimer); pomoTimer = null; });
+    renderPomo();
+  </script>
+</body>
+</html>
